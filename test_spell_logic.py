@@ -43,3 +43,24 @@ class TestNewGameResetsBoard:
 #  Write tests that check the rules from SPELL_CHESS_RULES.md.        #
 #  If a test fails, you've found a bug — document it!                 #
 # ------------------------------------------------------------------ #
+class TestJumpCharges:
+    """Each side beigns the game with 3 charges."""
+
+    def test_board_resets_after_moves(self):
+        game = SpellChessGame()
+        whiteJumpCharges = game.jump_remaining[chess.WHITE]
+        blackJumpCharges = game.jump_remaining[chess.BLACK]
+        assert whiteJumpCharges == 3
+        assert blackJumpCharges == 3
+
+class TestJumpChargesNewGame:
+    """Each side beigns the game with 3 charges when a new game is started."""
+
+    def test_board_resets_after_moves(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.B1, chess.C3)
+        game.new_game()
+        whiteJumpCharges = game.jump_remaining[chess.WHITE]
+        blackJumpCharges = game.jump_remaining[chess.BLACK]
+        assert whiteJumpCharges == 3
+        assert blackJumpCharges == 3
