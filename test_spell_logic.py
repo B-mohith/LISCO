@@ -64,3 +64,50 @@ class TestJumpChargesNewGame:
         blackJumpCharges = game.jump_remaining[chess.BLACK]
         assert whiteJumpCharges == 3
         assert blackJumpCharges == 3
+
+class TestFreezeLegalMoves:
+    """Verifies that pieces in the frozen area cannot move."""
+
+    def test_frozen_pieces_not_in_legal_moves(self):
+        game = SpellChessGame()
+        # cast freeze
+        game.cast_freeze(chess.E5)
+        # apply freeze (need a move)
+        game.make_move(chess.E2, chess.E4)
+        # get legal moves
+        legal_moves = game.get_legal_moves()
+        # squares affected by freeze
+        frozen_squares = squares_in_3x3(chess.E5)
+        # check that no move originates from frozen squares
+        for move in legal_moves:
+            assert move.from_square not in frozen_squares
+
+class TestFreezeDuration:
+    """Verifies that Freeze effect expires after a certain duration."""
+
+    def test_freeze_duration_expires(self):
+        game = SpellChessGame()
+        game.cast_freeze(chess.E5)
+        #apply freeze
+        game.make_move(chess.E2, chess.E4)
+        #freeze should be active
+        assert game.freeze_effect_plies_left > 0
+        #simulate turns
+        game.make_move(chess.E7, chess.E5)
+        game.make_move(chess.G1, chess.F3)
+        #freeze should expire
+        assert game.freeze_effect_color is None
+
+class TestFreezeCooldown:
+    """Verifies that Freeze cooldown decreases after each turn."""
+
+    def test_freeze_cooldown_decrements(self):
+        game = SpellChessGame()
+        game.cast_freeze(chess.E5)
+        start_cd = game.freeze_cooldown[chess.WHITE]
+        #simulate turns
+        game.make_move(chess.E2, chess.E4)
+        game.make_move(chess.E7, chess.E5)
+        #cooldown should decrease
+        assert game.freeze_cooldown[chess.WHITE] < start_cd
+    
