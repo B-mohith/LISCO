@@ -188,7 +188,7 @@ class TestFreezeDuration:
         #apply freeze
         game.make_move(chess.E2, chess.E4)
         #freeze should be active
-        assert game.freeze_effect_plies_left > 0
+        assert game.freeze_effect_plies_left == 1
         #simulate turns
         game.make_move(chess.E7, chess.E5)
         game.make_move(chess.G1, chess.F3)
@@ -204,9 +204,24 @@ class TestFreezeCooldown:
         start_cd = game.freeze_cooldown[chess.WHITE]
         #simulate turns
         game.make_move(chess.E2, chess.E4)
+        # Cooldown should not decrease on opponent's turn
+        assert game.freeze_cooldown[chess.WHITE] == start_cd
+        # Black moves, then it becomes White's turn again
         game.make_move(chess.E7, chess.E5)
         #cooldown should decrease
-        assert game.freeze_cooldown[chess.WHITE] < start_cd
+        assert game.freeze_cooldown[chess.WHITE] == start_cd - 1
+
+class TestFreezeOnlyAffectsOpponent:
+    """Verify Freeze Only Affects Opponent"""
+
+    def test_freeze_does_not_affect_caster(self):
+        game = SpellChessGame()
+        game.cast_freeze(chess.E5)
+        # white move
+        game.make_move(chess.E2, chess.E4)
+        # E4 is inside the 3x3 freeze area centered on E5,
+        # but White is the caster, so White should not be frozen.
+        assert not game.is_frozen(chess.E4, chess.WHITE)
 
 class TestJumpRange:
    """Verify range jump range is Chebyshev distance <= 2"""
