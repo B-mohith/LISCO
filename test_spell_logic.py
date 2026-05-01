@@ -64,6 +64,67 @@ class TestJumpChargesNewGame:
         blackJumpCharges = game.jump_remaining[chess.BLACK]
         assert whiteJumpCharges == 3
         assert blackJumpCharges == 3
+
+# Freeze tests for Sprint 1a, 1b, 1c
+class TestFreezeCharges: # 1a
+    """Each side beigns the game with 5 Freeze charges.
+        This class tests that the charges decrement or are set 
+        appropriately. """
+
+    def test_charges(self):
+        game = SpellChessGame()
+        whiteFreezeCharges = game.freeze_remaining[chess.WHITE]
+        blackFreezeCharges = game.freeze_remaining[chess.BLACK]
+        assert whiteFreezeCharges == 5
+        assert blackFreezeCharges == 5
+
+class TestFreezeChargesOnUseWhite:
+    """This class tests that the charges decrement or are set 
+        appropriately. """
+    
+    def test_charge_after_spell_use_white(self):
+        game = SpellChessGame()
+        # white casts freeze 
+        game.cast_freeze(chess.D4)
+        # get remaining freeze charges
+        whiteFreezeCharges = game.freeze_remaining[chess.WHITE]
+        blackFreezeCharges = game.freeze_remaining[chess.BLACK]
+        # white should have 1 less charge for freeze
+        assert whiteFreezeCharges == 4
+        assert blackFreezeCharges == 5
+
+class TestFreezeChargesOnUseBlack:
+    """This class tests that the charges decrement or are set 
+        appropriately. """
+    
+    def test_charge_after_spell_use_black(self):
+        game = SpellChessGame()
+        # white moves
+        game.make_move(chess.E2, chess.E4)
+        # black casts freeze
+        game.cast_freeze(chess.E4)
+        # get remaining freeze charges
+        whiteFreezeCharges = game.freeze_remaining[chess.WHITE]
+        blackFreezeCharges = game.freeze_remaining[chess.BLACK]
+        # white should have 1 less charge for freeze
+        assert whiteFreezeCharges == 5
+        assert blackFreezeCharges == 4 
+
+class TestFreezeChargesOnGameReset:
+    """This class tests if freeze charges are correctly set to 5
+        per player when a new game is reset."""
+    def test_charges_on_new_game(self):
+        game = SpellChessGame()
+        game.cast_freeze(chess.D4)
+        game.new_game()
+        whiteFreezeCharges = game.freeze_remaining[chess.WHITE]
+        blackFreezeCharges = game.freeze_remaining[chess.BLACK]
+        assert whiteFreezeCharges == 5
+        assert blackFreezeCharges == 5
+
+class TestFreezeDisplay():
+    pass 
+
 class TestJumpChargesCost:
     """Each Jump spell cast should cost 1 charge."""
 
@@ -145,4 +206,3 @@ class TestFreezeCooldown:
         game.make_move(chess.E7, chess.E5)
         #cooldown should decrease
         assert game.freeze_cooldown[chess.WHITE] < start_cd
-    
