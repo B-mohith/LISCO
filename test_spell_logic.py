@@ -122,6 +122,5 @@ class TestFreezeChargesOnGameReset:
         assert whiteFreezeCharges == 5
         assert blackFreezeCharges == 5
 
-class TestFreezeCastingConditions():
+class TestFreezeDisplay():
     """"""
-    pass
