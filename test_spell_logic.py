@@ -257,3 +257,39 @@ class TestJumpCooldown:
        
        # Spec says: "After casting Jump, the caster enters a 2-turn cooldown."
        assert game.jump_cooldown[chess.WHITE] == 2, f"Expected 2, got {game.jump_cooldown[chess.WHITE]}"
+
+class TestJumpOwnPiece:
+    """To cast, the player must select one of their own pieces"""
+
+    def test_jump_own_piece(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.B7, chess.C3)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+
+class TestJumpEmptySquare:
+    """While casting a Jump, the destination square must be empty"""
+
+    def test_jump_empty_square(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.B1, chess.A1)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+
+class TestJumpKing:
+    """The Jump spell cannot be casted on King"""
+
+    def test_jump_king(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.E1, chess.E3)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+class TestJumpTeleport:
+    """The Jump spell cannot be casted on King"""
+
+    def test_jump_teleport(self):
+        game = SpellChessGame()
+        piece1 = game.board.piece_at(chess.D1)
+        game.cast_jump(chess.D1, chess.E3)
+        piece2 = game.board.piece_at(chess.E3)
+        assert piece1 == piece2
