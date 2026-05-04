@@ -122,8 +122,44 @@ class TestFreezeChargesOnGameReset:
         assert whiteFreezeCharges == 5
         assert blackFreezeCharges == 5
 
-class TestFreezeDisplay():
-    pass 
+class TestFreezeZeroCharges:
+    """ This class tests that a player cannot use freeze if they have 0 charges remaining"""
+
+    def test_freeze_zero_charges(self):
+        game = SpellChessGame()
+        for i in range(5):
+            freeze_cast = game.cast_freeze(chess.G7) # freeze is casted, 3 turn cooldown
+            game.make_move(chess.B1, chess.C3) # 1 turn passed
+            game.make_move(chess.B8, chess.C6) 
+            game.make_move(chess.C3, chess.B1) # 2 turn 
+            game.make_move(chess.C6, chess.B8)
+            game.make_move(chess.B1, chess.C3) # 3 turn passed
+            game.make_move(chess.B8, chess.C6) 
+
+        freeze_cast = game.cast_freeze(chess.G7)
+        assert freeze_cast == False
+
+class TestFreezeCastFailBeforeCooldown:
+    """ This class tests that a player cannot use freeze if casted freeze 3 turns ago"""
+
+    def test_freeze_cast_one_turn(self):
+        game = SpellChessGame()
+        freeze_cast = game.cast_freeze(chess.G7) # freeze is casted, 3 turn cooldown
+        game.make_move(chess.A2, chess.A3) # 1 turn passed 
+        game.make_move(chess.A7, chess.A6) 
+        freeze_cast = game.cast_freeze(chess.G7) # 2nd freeze
+        assert freeze_cast == False
+
+class TestTurnSwapAfterFreeze:
+    """ This class tests that a player cannot use freeze if casted freeze 3 turns ago"""
+
+    def test_freeze_cast_one_turn(self):
+        game = SpellChessGame()
+        freeze_cast = game.cast_freeze(chess.G7) # freeze is casted, 3 turn cooldown
+        assert game.current_turn() == chess.WHITE # after freeze it is white's turn
+        move_bool = game.make_move(chess.A2, chess.A3) # 1 turn passed 
+        assert (move_bool == True and game.current_turn() == chess.BLACK) or (move_bool == False and game.current_turn() == chess.WHITE) # it should be black's turn if move is true
+
 
 class TestJumpChargesCost:
     """Each Jump spell cast should cost 1 charge."""
