@@ -43,6 +43,7 @@ class TestNewGameResetsBoard:
 #  Write tests that check the rules from SPELL_CHESS_RULES.md.        #
 #  If a test fails, you've found a bug — document it!                 #
 # ------------------------------------------------------------------ #
+
 class TestJumpCharges:
     """Each side beigns the game with 3 charges."""
 
@@ -212,7 +213,7 @@ class TestFreezeDuration:
         #apply freeze
         game.make_move(chess.E2, chess.E4)
         #freeze should be active
-        assert game.freeze_effect_plies_left > 0
+        assert game.freeze_effect_plies_left == 1
         #simulate turns
         game.make_move(chess.E7, chess.E5)
         game.make_move(chess.G1, chess.F3)
@@ -228,6 +229,184 @@ class TestFreezeCooldown:
         start_cd = game.freeze_cooldown[chess.WHITE]
         #simulate turns
         game.make_move(chess.E2, chess.E4)
+        # Cooldown should not decrease on opponent's turn
+        assert game.freeze_cooldown[chess.WHITE] == start_cd
+        # Black moves, then it becomes White's turn again
         game.make_move(chess.E7, chess.E5)
         #cooldown should decrease
-        assert game.freeze_cooldown[chess.WHITE] < start_cd
+        assert game.freeze_cooldown[chess.WHITE] == start_cd - 1
+
+class TestFreezeOnlyAffectsOpponent:
+    """Verify Freeze Only Affects Opponent"""
+
+    def test_freeze_does_not_affect_caster(self):
+        game = SpellChessGame()
+        game.cast_freeze(chess.E5)
+        # white move
+        game.make_move(chess.E2, chess.E4)
+        # E4 is inside the 3x3 freeze area centered on E5,
+        # but White is the caster, so White should not be frozen.
+        assert not game.is_frozen(chess.E4, chess.WHITE)
+
+class TestJumpRange:
+   """Verify range jump range is Chebyshev distance <= 2"""
+
+   def test_jump_max_distance_2(self):
+       # Center is e4 (file 4, rank 3)
+       squares = squares_in_jump_range(chess.E4)
+      
+       # e6 (file 4, rank 5) -> distance 2 (valid)
+       assert chess.E6 in squares
+      
+       # e7 (file 4, rank 6) -> distance 3 (invalid)
+       # Spec: destination must be within Chebyshev distance 2
+       assert chess.E7 not in squares
+      
+       # b7 (file 1, rank 6) -> distance 3 (invalid)
+       assert chess.B7 not in squares
+
+class TestJumpDestEmpty:
+   """Verify that the piece can only land on an empty square - no capture can happen."""
+  
+   def test_jump_cannot_target_occupied_square(self):
+       game = SpellChessGame()
+       game.board.clear_board()
+       game.board.turn = chess.WHITE
+      
+       # White piece at a1
+       game.board.set_piece_at(chess.A1, chess.Piece(chess.KNIGHT, chess.WHITE))
+       # Black piece at a3
+       game.board.set_piece_at(chess.A3, chess.Piece(chess.PAWN, chess.BLACK))
+      
+       # Attempt to jump White Knight from a1 to a3 (occupied)
+       success = game.cast_jump(chess.A1, chess.A3)
+       assert success is False, "Jump should fail if destination square is occupied"
+
+class TestJumpCooldown:
+   """Verify all cooldown conditions for Jump: starts at 2, decrements each turn, and prevents casting."""
+  
+   def test_jump_cooldown_is_two_turns(self):
+       game = SpellChessGame()
+       game.board.clear_board()
+       game.board.turn = chess.WHITE
+      
+       # White piece at c3
+       game.board.set_piece_at(chess.C3, chess.Piece(chess.ROOK, chess.WHITE))
+      
+       game.cast_jump(chess.C3, chess.C4)
+       
+       # Spec says: "After casting Jump, the caster enters a 2-turn cooldown."
+       assert game.jump_cooldown[chess.WHITE] == 2, f"Expected 2, got {game.jump_cooldown[chess.WHITE]}"
+
+   def test_jump_cooldown_decrements(self):
+       game = SpellChessGame()
+       game.cast_jump(chess.B1, chess.C3)
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # White makes a move, ending their turn
+       game.make_move(chess.E2, chess.E4)
+       # Cooldown shouldn't decrease on opponent's turn
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # Black makes a move, White's turn starts again
+       game.make_move(chess.E7, chess.E5)
+       assert game.jump_cooldown[chess.WHITE] == 1
+       
+       # White makes a move
+       game.make_move(chess.G1, chess.F3)
+       # Black makes a move, White's turn starts again
+       game.make_move(chess.B8, chess.C6)
+       assert game.jump_cooldown[chess.WHITE] == 0
+
+   def test_jump_prevented_while_on_cooldown(self):
+       game = SpellChessGame()
+       game.cast_jump(chess.B1, chess.C3)
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # Attempt to cast jump again while cooldown is active
+       success1 = game.cast_jump(chess.G1, chess.F3)
+       assert success1 is False, "Jump should fail while on 2-turn cooldown"
+       
+       game.make_move(chess.E2, chess.E4)
+       game.make_move(chess.E7, chess.E5)
+       assert game.jump_cooldown[chess.WHITE] == 1
+       
+       # Attempt to cast jump again while cooldown is active (1 turn left)
+       success2 = game.cast_jump(chess.G1, chess.F3)
+       assert success2 is False, "Jump should fail while on 1-turn cooldown"
+
+class TestJumpOwnPiece:
+    """To cast, the player must select one of their own pieces"""
+
+    def test_jump_own_piece(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.B7, chess.C3)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+
+class TestJumpEmptySquare:
+    """While casting a Jump, the destination square must be empty"""
+
+    def test_jump_empty_square(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.B1, chess.A1)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+
+class TestJumpKing:
+    """The Jump spell cannot be casted on King"""
+
+    def test_jump_king(self):
+        game = SpellChessGame()
+        game.cast_jump(chess.E1, chess.E3)
+        ans = game.jump_casted_this_turn
+        assert ans == False
+class TestJumpTeleport:
+    """The Jump spell cannot be casted on King"""
+
+    def test_jump_teleport(self):
+        game = SpellChessGame()
+        piece1 = game.board.piece_at(chess.D1)
+        game.cast_jump(chess.D1, chess.E3)
+        piece2 = game.board.piece_at(chess.E3)
+        assert piece1 == piece2
+
+class TestJumpTurnConstraints:
+    """Verify that Jump can only be cast once per turn and before a move is made."""
+
+    def test_jump_once_per_turn(self):
+        """Verify Jump can only be cast once per turn."""
+        game = SpellChessGame()
+        game.board.clear_board()
+        game.board.turn = chess.WHITE
+        
+        # Place two Valid pieces 
+        game.board.set_piece_at(chess.A1, chess.Piece(chess.KNIGHT, chess.WHITE))
+        game.board.set_piece_at(chess.H1, chess.Piece(chess.ROOK, chess.WHITE))
+        
+        # Give White multiple charges and no cooldown for true isolation of the 'once per turn' constraint
+        game.jump_remaining[chess.WHITE] = 3
+        game.jump_cooldown[chess.WHITE] = 0
+        
+        # Cast jump for the first piece
+        success1 = game.cast_jump(chess.A1, chess.A3)
+        assert success1 is True, "First jump should succeed"
+        
+        # Reset cooldown explicitly to check if the 'once per turn' flag blocks the next jump
+        game.jump_cooldown[chess.WHITE] = 0
+        
+        # Attempt second jump on same turn
+        success2 = game.cast_jump(chess.H1, chess.H3)
+        assert success2 is False, "Second jump in the same turn should fail"
+
+    def test_jump_before_move(self):
+        """Verify a player must cast jump before making a regular move."""
+        game = SpellChessGame()
+        
+        # White makes a normal move, which ends their turn
+        game.make_move(chess.E2, chess.E4)
+        
+        # Now it is Black's turn. If White tries to cast Jump now, it should fail
+        success = game.cast_jump(chess.G1, chess.F3)
+        
+        assert success is False, "Jump should fail if cast after a move has already been made (turn ended)"
