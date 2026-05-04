@@ -345,3 +345,43 @@ class TestJumpTeleport:
         game.cast_jump(chess.D1, chess.E3)
         piece2 = game.board.piece_at(chess.E3)
         assert piece1 == piece2
+
+class TestJumpTurnConstraints:
+    """Verify that Jump can only be cast once per turn and before a move is made."""
+
+    def test_jump_once_per_turn(self):
+        """Verify Jump can only be cast once per turn."""
+        game = SpellChessGame()
+        game.board.clear_board()
+        game.board.turn = chess.WHITE
+        
+        # Place two Valid pieces 
+        game.board.set_piece_at(chess.A1, chess.Piece(chess.KNIGHT, chess.WHITE))
+        game.board.set_piece_at(chess.H1, chess.Piece(chess.ROOK, chess.WHITE))
+        
+        # Give White multiple charges and no cooldown for true isolation of the 'once per turn' constraint
+        game.jump_remaining[chess.WHITE] = 3
+        game.jump_cooldown[chess.WHITE] = 0
+        
+        # Cast jump for the first piece
+        success1 = game.cast_jump(chess.A1, chess.A3)
+        assert success1 is True, "First jump should succeed"
+        
+        # Reset cooldown explicitly to check if the 'once per turn' flag blocks the next jump
+        game.jump_cooldown[chess.WHITE] = 0
+        
+        # Attempt second jump on same turn
+        success2 = game.cast_jump(chess.H1, chess.H3)
+        assert success2 is False, "Second jump in the same turn should fail"
+
+    def test_jump_before_move(self):
+        """Verify a player must cast jump before making a regular move."""
+        game = SpellChessGame()
+        
+        # White makes a normal move, which ends their turn
+        game.make_move(chess.E2, chess.E4)
+        
+        # Now it is Black's turn. If White tries to cast Jump now, it should fail
+        success = game.cast_jump(chess.G1, chess.F3)
+        
+        assert success is False, "Jump should fail if cast after a move has already been made (turn ended)"
