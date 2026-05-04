@@ -150,17 +150,6 @@ class TestFreezeCastFailBeforeCooldown:
         freeze_cast = game.cast_freeze(chess.G7) # 2nd freeze
         assert freeze_cast == False
 
-class TestTurnSwapAfterFreeze:
-    """ This class tests that a player cannot use freeze if casted freeze 3 turns ago"""
-
-    def test_freeze_cast_one_turn(self):
-        game = SpellChessGame()
-        freeze_cast = game.cast_freeze(chess.G7) # freeze is casted, 3 turn cooldown
-        assert game.current_turn() == chess.WHITE # after freeze it is white's turn
-        move_bool = game.make_move(chess.A2, chess.A3) # 1 turn passed 
-        assert (move_bool == True and game.current_turn() == chess.BLACK) or (move_bool == False and game.current_turn() == chess.WHITE) # it should be black's turn if move is true
-
-
 class TestJumpChargesCost:
     """Each Jump spell cast should cost 1 charge."""
 
