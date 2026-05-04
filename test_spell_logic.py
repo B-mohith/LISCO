@@ -258,7 +258,7 @@ class TestJumpDestEmpty:
        assert success is False, "Jump should fail if destination square is occupied"
 
 class TestJumpCooldown:
-   """Verify that cooldown after casting is 2 turns."""
+   """Verify all cooldown conditions for Jump: starts at 2, decrements each turn, and prevents casting."""
   
    def test_jump_cooldown_is_two_turns(self):
        game = SpellChessGame()
@@ -272,6 +272,43 @@ class TestJumpCooldown:
        
        # Spec says: "After casting Jump, the caster enters a 2-turn cooldown."
        assert game.jump_cooldown[chess.WHITE] == 2, f"Expected 2, got {game.jump_cooldown[chess.WHITE]}"
+
+   def test_jump_cooldown_decrements(self):
+       game = SpellChessGame()
+       game.cast_jump(chess.B1, chess.C3)
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # White makes a move, ending their turn
+       game.make_move(chess.E2, chess.E4)
+       # Cooldown shouldn't decrease on opponent's turn
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # Black makes a move, White's turn starts again
+       game.make_move(chess.E7, chess.E5)
+       assert game.jump_cooldown[chess.WHITE] == 1
+       
+       # White makes a move
+       game.make_move(chess.G1, chess.F3)
+       # Black makes a move, White's turn starts again
+       game.make_move(chess.B8, chess.C6)
+       assert game.jump_cooldown[chess.WHITE] == 0
+
+   def test_jump_prevented_while_on_cooldown(self):
+       game = SpellChessGame()
+       game.cast_jump(chess.B1, chess.C3)
+       assert game.jump_cooldown[chess.WHITE] == 2
+       
+       # Attempt to cast jump again while cooldown is active
+       success1 = game.cast_jump(chess.G1, chess.F3)
+       assert success1 is False, "Jump should fail while on 2-turn cooldown"
+       
+       game.make_move(chess.E2, chess.E4)
+       game.make_move(chess.E7, chess.E5)
+       assert game.jump_cooldown[chess.WHITE] == 1
+       
+       # Attempt to cast jump again while cooldown is active (1 turn left)
+       success2 = game.cast_jump(chess.G1, chess.F3)
+       assert success2 is False, "Jump should fail while on 1-turn cooldown"
 
 class TestJumpOwnPiece:
     """To cast, the player must select one of their own pieces"""
